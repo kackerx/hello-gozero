@@ -1,0 +1,50 @@
+services:
+  etcd:
+    image: bitnami/etcd:3.5.5
+    #    build: # dockerfile自动构建
+    #      context: ./
+    #      dockerfile: xx
+    container_name: etcd
+    ports:
+      - "2379:2379"
+      - "2380:2380"
+    environment:
+      - ETCD_ENABLE_V2=true
+      - ALLOW_NONE_AUTHENTICATION=true
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_NAME=etcd
+    volumes:
+      - ./etcd/data:/bitnami/etcd/data
+      - ./etcd/logs:/bitnami/etcd/logs
+    networks:
+      bookstore:
+
+
+  book-add:
+    image: kacker/book-add
+    container_name: book-add
+    ports:
+      - "8080:8080"
+    links:
+      - etcd
+
+
+  book-api:
+    image: docker.io/istio/proxyv2:1.10.4
+    comtainer_name: book-api
+    ports:
+      - "8888:8888"
+    links: # 该容器内会有dns解析条目, 并且会自动创建一些环境变量
+      - etcd
+    depends_on:
+      - etcd
+      - add-rpc
+      - check-rpc
+    networks:
+      - bookstore
+
+networks:
+  bookstore:
+    external:
+      name: bookstore
